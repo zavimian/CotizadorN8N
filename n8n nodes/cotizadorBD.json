@@ -1,0 +1,111 @@
+{
+  "name": "cotizadorBD",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "get-cursos",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -544,
+        -48
+      ],
+      "id": "936196ab-a14b-44a7-a023-72cd0659f6a7",
+      "name": "Webhook",
+      "webhookId": "fc52a575-882e-4d11-a67e-2ae73d60ef3e"
+    },
+    {
+      "parameters": {
+        "content": "ALIMENTAR LISTA DE CURSOS AL HTML\n**Este flujo es para que se vea el listado de los cursos en el formulario HTML",
+        "height": 128,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -224
+      ],
+      "id": "ada620d6-5c1d-4cfb-afd9-d46f4a6cc915",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM \"catalogo_servicios\";",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -336,
+        -48
+      ],
+      "id": "a8775c0e-385a-47bb-a23b-f077aebf0aa9",
+      "name": "Recupera la lista de cursos de la BD",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -144,
+        -48
+      ],
+      "id": "e6f50d6d-6834-4596-a89f-e274a267073a",
+      "name": "Manda la lista de cursos al front end"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Recupera la lista de cursos de la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recupera la lista de cursos de la BD": {
+      "main": [
+        [
+          {
+            "node": "Manda la lista de cursos al front end",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "621041ae-aee8-4903-9581-02e497a31fe5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7e9924f54267a2ef5027947d1d0a073b36c02ac22ef4fdd9490629c036e3f205"
+  },
+  "id": "uGv8r5CjrqgpRAtoDIf1H",
+  "tags": []
+}

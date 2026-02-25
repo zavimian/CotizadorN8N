@@ -1,0 +1,324 @@
+{
+  "name": "cotizadorForm",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-cotizacion",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "c529fd64-6c1c-418a-a78d-87af259de035",
+      "name": "Webhook",
+      "webhookId": "45cacb95-8222-45f9-a734-fe897a7ff72a"
+    },
+    {
+      "parameters": {
+        "content": "## GUARDAR CLIENTES A LA BD\n**Este flujo recibe los datos del HTML y los guarda en la BD postgres cotizaciones",
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -240
+      ],
+      "id": "a330aaca-f506-477e-8ef7-562562c0fdfc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizaciones_generadas",
+          "mode": "list",
+          "cachedResultName": "cotizaciones_generadas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "total_cotizacion": 0,
+            "email_cliente": "={{ $json.body.email }}",
+            "nombre_cliente": "={{ $json.body.nombre }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "nombre_cliente",
+              "displayName": "nombre_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_cliente",
+              "displayName": "email_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "borrador_ia",
+              "displayName": "borrador_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_cotizacion",
+              "displayName": "total_cotizacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "outputColumns": [
+            "id"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "2b478caa-fe6a-43e7-b7be-37be1b75c09d",
+      "name": "inserta el cliente en la BD",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88a70ef1-c9f4-4f8c-9c72-f1faca74a19f",
+              "name": "id_cliente",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "91779554-0c94-4745-8316-a67cb021f63b",
+              "name": "lista_cursos",
+              "value": "={{ $('Webhook').item.json.body.cursos }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        0
+      ],
+      "id": "f42c6ae1-c680-46fe-823b-ae55b8018d94",
+      "name": "Genera una lista de los cursos con el id del cliente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos los datos del nodo anterior (Edit Fields)\nconst item = $input.all()[0].json; \nconst id_cliente = item.id_cliente;\nconst lista_cursos = item.lista_cursos;\n\n// Creamos un nuevo item por cada curso de la lista\nreturn lista_cursos.map(curso_id => {\n  return {\n    json: {\n      cotizacion_id: id_cliente,\n      servicio_id: curso_id,\n      precio_aplicado: 0 // Valor por defecto\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "ce433921-3b37-4f73-beb9-57c8da674d85",
+      "name": "Manda la el curso separado con el id del cliente para poder alimentar la BD"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizacion_detalles",
+          "mode": "list",
+          "cachedResultName": "cotizacion_detalles"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cotizacion_id": "={{ $json.cotizacion_id }}",
+            "precio_aplicado": 0,
+            "servicio_id": "={{ $json.servicio_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cotizacion_id",
+              "displayName": "cotizacion_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "servicio_id",
+              "displayName": "servicio_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "precio_aplicado",
+              "displayName": "precio_aplicado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        560,
+        0
+      ],
+      "id": "007124e9-7b87-44ef-80fc-a153f20c4bd1",
+      "name": "Llena la BD de relacion N:N de los cursos con el cliente",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "inserta el cliente en la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inserta el cliente en la BD": {
+      "main": [
+        [
+          {
+            "node": "Genera una lista de los cursos con el id del cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera una lista de los cursos con el id del cliente": {
+      "main": [
+        [
+          {
+            "node": "Manda la el curso separado con el id del cliente para poder alimentar la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manda la el curso separado con el id del cliente para poder alimentar la BD": {
+      "main": [
+        [
+          {
+            "node": "Llena la BD de relacion N:N de los cursos con el cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5d8cb220-e01b-42c4-a6ac-289dde405d0a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7e9924f54267a2ef5027947d1d0a073b36c02ac22ef4fdd9490629c036e3f205"
+  },
+  "id": "V2rAKjwW-xH8wJZ-GFHYU",
+  "tags": []
+}

@@ -1,0 +1,1109 @@
+{
+  "name": "crearPDFcotizador COTY",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## CREADOR DE PDFs\n**Este flujo realiza la cotizacion, actualiza la BD y crea el PDF, lo sube a google drive y lo envia por correo",
+        "height": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -544
+      ],
+      "id": "73c1ad0c-d91c-4ecb-8160-5d209de94155",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { \n    font-family: 'Helvetica', Arial, sans-serif; \n    color: #333; \n    padding: 40px; \n    line-height: 1.6;\n  }\n  .header { \n    border-bottom: 3px solid #2c3e50; \n    margin-bottom: 20px; \n    padding-bottom: 10px;\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n  }\n  h1 { color: #2c3e50; margin: 0; font-size: 24px; }\n  .fecha { font-size: 14px; color: #7f8c8d; }\n  \n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-top: 20px; \n  }\n  th { \n    background-color: #2c3e50; \n    color: white; \n    text-align: left; \n    padding: 12px; \n  }\n  td { padding: 12px; border-bottom: 1px solid #eee; }\n  \n  /* Efecto de filas intercaladas (Zebra Striping) */\n  tr:nth-child(even) { background-color: #f2f2f2; } /* Gris claro */\n  tr:nth-child(odd) { background-color: #ffffff; }  /* Blanco */\n\n  .totales-container {\n    margin-top: 30px;\n    display: flex;\n    justify-content: flex-end;\n  }\n  .totales-tabla { width: 250px; }\n  .totales-tabla td { border: none; padding: 5px 10px; }\n  .total-final { \n    font-weight: bold; \n    font-size: 18px; \n    color: #e67e22; \n    border-top: 2px solid #2c3e50 !important;\n  }\n</style>\n</head>\n<body>\n\n  <div class=\"header\">\n    <h1>Cotización de Servicios</h1>\n    <span class=\"fecha\">Fecha: {{ $json.fecha_generacion || new Date().toLocaleDateString() }}</span>\n  </div>\n\n  <p>Estimado(a) <strong> {{ $json.nombre_cliente }} </strong>,</p>\n  <p>A continuación, presentamos el detalle de los cursos solicitados:</p>\n\n  <table>\n    <thead>\n      <tr>\n        <th>Descripción del Curso</th>\n        <th style=\"text-align: right;\">Precio</th>\n      </tr>\n    </thead>\n    <tbody>\n      {{ $json.borrador_ia.split('\\n').filter(line => line.startsWith('- ')).map(curso => {\n         const parts = curso.replace('- ', '').split(': ');\n         return `<tr><td>${parts[0]}</td><td style=\"text-align: right;\">${parts[1]}</td></tr>`;\n      }).join('') }}\n    </tbody>\n  </table>\n\n  <div class=\"totales-container\">\n    <table class=\"totales-tabla\">\n      <tr>\n        <td>Subtotal:</td>\n        <td style=\"text-align: right;\">$ {{ $('cotizacion total y borrador').item.json.subtotal }}</td>\n      </tr>\n      <tr>\n        <td>IVA (16%):</td>\n        <td style=\"text-align: right;\">$ {{ $('cotizacion total y borrador').item.json.iva }}</td>\n      </tr>\n      <tr class=\"total-final\">\n        <td>TOTAL:</td>\n        <td style=\"text-align: right;\">$ {{ $json.total_cotizacion }}</td>\n      </tr>\n    </table>\n  </div>\n\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        -96
+      ],
+      "id": "b51c1eb1-65a5-4cec-ae1e-85fb5a9fd7b4",
+      "name": "Generar la plantilla HTML de la cotizacion"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Webhook').first().json.body.nombre }}_cotizacion.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1NYEBIZSgKL6yJJiZD9uvwe3McqJAbw79",
+          "mode": "list",
+          "cachedResultName": "cotizaciones",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1NYEBIZSgKL6yJJiZD9uvwe3McqJAbw79"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1712,
+        -256
+      ],
+      "id": "d0f40358-2557-4e68-9bf2-bc89d432ee30",
+      "name": "Subir cotizacion en PDF en Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "aaZGPVmKX3KOlyhy",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $node[\"Subir cotizacion en PDF en Google Drive\"].json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1904,
+        -256
+      ],
+      "id": "335bbea8-82cb-4a10-950f-67343c7394df",
+      "name": "Bajar Cotizacion PDF para envío por correo a la empresa",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "aaZGPVmKX3KOlyhy",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "put_company_mail_here@mail.com",
+        "subject": "=Cotizacion - {{ $('Webhook').first().json.body.nombre }}",
+        "message": "=Hola, se ha generado una nueva cotizacion para el cliente:\n\n {{ $('Webhook').first().json.body.nombre }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2096,
+        -256
+      ],
+      "id": "e7136970-c8f9-43d5-9d28-00cda129bf17",
+      "name": "Mandar cotizacion PDF a correo de la empresa",
+      "webhookId": "9c339d7a-726e-494a-882e-6f9121a7b1de",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cwUbeZ3NqJyBNBEr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $node[\"Subir cotizacion en PDF en Google Drive\"].json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2288,
+        -256
+      ],
+      "id": "fd678ee1-791f-4ac4-b5a8-7a68369c1d26",
+      "name": "Bajar Cotizacion PDF para correo en borrador al cliente",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "aaZGPVmKX3KOlyhy",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Cotizacion - {{ $('Webhook').first().json.body.nombre }}",
+        "emailType": "html",
+        "message": "=Cotizacion -  {{ $('Webhook').first().json.body.nombre }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          },
+          "sendTo": "={{ $('Webhook').first().json.body.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2480,
+        -256
+      ],
+      "id": "ac3484d0-d6a8-4a7f-a5a4-05a9e11be0e4",
+      "name": "Crea borrador para el cliente con la cotizacion en PDF",
+      "webhookId": "d58717d2-2f3b-454e-a72f-4a2cf7741538",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cwUbeZ3NqJyBNBEr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfshift.io/v3/convert/pdf",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source",
+              "value": "={{ $json.html }}"
+            },
+            {
+              "name": "filename",
+              "value": "={{ $('Webhook').first().json.body.nombre }}_cotizacion.pdf"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1328,
+        -256
+      ],
+      "id": "a3dc5365-5ac7-41c0-a686-1910af2c39fa",
+      "name": "Peticion a pdfshift para generar el PDF",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7bpq3pmFGjo9pupp",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1520,
+        -256
+      ],
+      "id": "e41ac2dc-3702-407d-b1f6-c1f5c600ef40",
+      "name": "Manda el PDF ya creado de pdfshift"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "submit-cotizacion",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        -256
+      ],
+      "id": "6d59da5d-b50d-412a-b5a0-e6ff0e7bbbf6",
+      "name": "Webhook",
+      "webhookId": "45cacb95-8222-45f9-a734-fe897a7ff72a"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizaciones_generadas",
+          "mode": "list",
+          "cachedResultName": "cotizaciones_generadas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "total_cotizacion": 0,
+            "email_cliente": "={{ $json.body.email }}",
+            "nombre_cliente": "={{ $json.body.nombre }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "nombre_cliente",
+              "displayName": "nombre_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email_cliente",
+              "displayName": "email_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "borrador_ia",
+              "displayName": "borrador_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_cotizacion",
+              "displayName": "total_cotizacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "outputColumns": [
+            "id"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -512,
+        -256
+      ],
+      "id": "1431f14b-f71f-4c17-9a18-91024cbb09bc",
+      "name": "inserta el cliente en la BD",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88a70ef1-c9f4-4f8c-9c72-f1faca74a19f",
+              "name": "id_cliente",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "91779554-0c94-4745-8316-a67cb021f63b",
+              "name": "lista_cursos",
+              "value": "={{ $('Webhook').item.json.body.cursos }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -320,
+        -256
+      ],
+      "id": "fd3721e0-bed6-4869-9182-65f43c9c9dc9",
+      "name": "Genera una lista de los cursos con el id del cliente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos los datos del nodo anterior (Edit Fields)\nconst item = $input.all()[0].json; \nconst id_cliente = item.id_cliente;\nconst lista_cursos = item.lista_cursos;\n\n// Creamos un nuevo item por cada curso de la lista\nreturn lista_cursos.map(curso_id => {\n  return {\n    json: {\n      cotizacion_id: id_cliente,\n      servicio_id: curso_id,\n      precio_aplicado: 0 // Valor por defecto\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -256
+      ],
+      "id": "ae88b73f-90e4-413f-99c8-dadfab90f966",
+      "name": "Manda la el curso separado con el id del cliente para poder alimentar la BD"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizacion_detalles",
+          "mode": "list",
+          "cachedResultName": "cotizacion_detalles"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cotizacion_id": "={{ $json.cotizacion_id }}",
+            "precio_aplicado": 0,
+            "servicio_id": "={{ $json.servicio_id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "cotizacion_id",
+              "displayName": "cotizacion_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "servicio_id",
+              "displayName": "servicio_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "precio_aplicado",
+              "displayName": "precio_aplicado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        48,
+        -256
+      ],
+      "id": "d5f92e36-9077-4075-aad8-97224893abf4",
+      "name": "Llena la BD de relacion N:N de los cursos con el cliente",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "855ad6d0-c5a4-457a-937a-3516edaffd86",
+              "leftValue": "={{ $('Webhook').item.json.body.descuento }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        -256
+      ],
+      "id": "86329b73-2af3-4a65-88e4-c27bb0278b2f",
+      "name": "Pregunta si tiene descuento"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT cs.nombre_curso, cs.precio_unitario \nFROM catalogo_servicios cs\nWHERE cs.id IN ({{ $json.servicio_id }});",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "9e248a5a-736a-4c78-9cf8-f142335a1a36",
+      "name": "Query para precio de los cursos",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Inicializar variables de cálculo\nlet subtotal = 0;\nlet listaCursosTexto = \"\";\nconst ivaPorcentaje = 0.16;\n\n// 2. Procesar cada curso que llega del nodo anterior\nfor (const item of items) {\n  // Intentamos obtener el nombre y precio. \n  // Si vienen de un SELECT de catalogo_servicios, se llaman nombre_curso y precio_unitario.\n  const nombre = item.json.nombre_curso || \"Curso sin nombre\";\n  const precio = parseFloat(item.json.precio_unitario) || 0;\n\n  subtotal += precio;\n  \n  // Formateamos cada línea para el borrador\n  listaCursosTexto += `- ${nombre}: $${precio.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n`;\n}\n\n// 3. Realizar cálculos finales (Sin descuento por ahora)\nconst iva = subtotal * ivaPorcentaje;\nconst granTotal = subtotal + iva;\n\n// 4. Obtener fecha actual para el encabezado\nconst fechaHoy = new Date().toLocaleDateString('es-MX', {\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric'\n});\n\n// 5. Redactar el cuerpo del borrador_ia\nconst borradorIA = `--- COTIZACIÓN GENERADA EL ${fechaHoy} ---\\n\\n` +\n                 `CURSOS ASIGNADOS:\\n` +\n                 `${listaCursosTexto}\\n` +\n                 `SUBTOTAL: $${subtotal.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `IVA (16%): $${iva.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `===========================\\n` +\n                 `TOTAL FINAL: $${granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2})}`;\n\n// 6. Devolver el objeto consolidado para los siguientes nodos (Update y PDF)\nreturn [{\n  json: {\n    total_cotizacion: granTotal.toFixed(2),\n    borrador_ia: borradorIA,\n    subtotal: subtotal.toFixed(2),\n    iva: iva.toFixed(2),\n    cantidad_cursos: items.length,\n    fecha_generacion: fechaHoy\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "a1f77dce-ab10-4323-ad2f-326f699a26d8",
+      "name": "cotizacion total y borrador"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizaciones_generadas",
+          "mode": "list",
+          "cachedResultName": "cotizaciones_generadas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "borrador_ia": "={{ $json.borrador_ia }}",
+            "total_cotizacion": "={{ $json.total_cotizacion }}",
+            "id": "={{ $('inserta el cliente en la BD').first().json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre_cliente",
+              "displayName": "nombre_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email_cliente",
+              "displayName": "email_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "borrador_ia",
+              "displayName": "borrador_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_cotizacion",
+              "displayName": "total_cotizacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        752,
+        -96
+      ],
+      "id": "d217418d-9b19-438f-a7b6-4fa9cf6056bb",
+      "name": "Update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT cs.nombre_curso, cs.precio_unitario \nFROM catalogo_servicios cs\nWHERE cs.id IN ({{ $json.servicio_id }});",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        -416
+      ],
+      "id": "633d0d8a-1de5-4e4b-b843-62174043eea7",
+      "name": "B-Query para precio de los cursos",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Inicializar variables de cálculo\nlet subtotalOriginal = 0;\nlet listaCursosTexto = \"\";\nconst ivaPorcentaje = 0.16;\n\n// 2. Capturar el descuento desde el Webhook (usando .first() para seguridad)\n// Si no viene descuento, se asume 0\nconst factorDescuento = parseFloat($('Webhook').first().json.body.descuento) || 0;\nconst porcentajeVisible = (factorDescuento * 100).toFixed(0) + \"%\";\n\n// 3. Procesar cada curso\nfor (const item of items) {\n  const nombre = item.json.nombre_curso || \"Curso sin nombre\";\n  const precio = parseFloat(item.json.precio_unitario) || 0;\n\n  subtotalOriginal += precio;\n  listaCursosTexto += `- ${nombre}: $${precio.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n`;\n}\n\n// 4. Cálculos con Descuento e IVA\nconst montoDescuento = subtotalOriginal * factorDescuento;\nconst subtotalConDescuento = subtotalOriginal - montoDescuento;\nconst iva = subtotalConDescuento * ivaPorcentaje;\nconst granTotal = subtotalConDescuento + iva;\n\n// 5. Fecha para el encabezado\nconst fechaHoy = new Date().toLocaleDateString('es-MX', {\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric'\n});\n\n// 6. Redactar el cuerpo del borrador_ia incluyendo la nueva sección de descuentos\nconst borradorIA = `--- COTIZACIÓN GENERADA EL ${fechaHoy} ---\\n\\n` +\n                 `CURSOS ASIGNADOS:\\n` +\n                 `${listaCursosTexto}\\n` +\n                 `SUBTOTAL BASE: $${subtotalOriginal.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `DESCUENTO (${porcentajeVisible}): -$${montoDescuento.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `SUBTOTAL NETO: $${subtotalConDescuento.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `IVA (16%): $${iva.toLocaleString('es-MX', {minimumFractionDigits: 2})}\\n` +\n                 `===========================\\n` +\n                 `TOTAL FINAL: $${granTotal.toLocaleString('es-MX', {minimumFractionDigits: 2})}`;\n\n// 7. Devolver el objeto consolidado\nreturn [{\n  json: {\n    total_cotizacion: granTotal.toFixed(2),\n    borrador_ia: borradorIA,\n    subtotal_base: subtotalOriginal.toFixed(2),\n    porcentaje_descuento: porcentajeVisible,\n    monto_descuento: montoDescuento.toFixed(2),\n    subtotal_neto: subtotalConDescuento.toFixed(2),\n    iva: iva.toFixed(2),\n    cantidad_cursos: items.length,\n    fecha_generacion: fechaHoy\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -416
+      ],
+      "id": "aa794b8b-da47-4efc-8bc1-cfc08a6f8738",
+      "name": "B-cotizacion total y borrador"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "cotizaciones_generadas",
+          "mode": "list",
+          "cachedResultName": "cotizaciones_generadas"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "borrador_ia": "={{ $json.borrador_ia }}",
+            "total_cotizacion": "={{ $json.total_cotizacion }}",
+            "id": "={{ $('inserta el cliente en la BD').first().json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre_cliente",
+              "displayName": "nombre_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email_cliente",
+              "displayName": "email_cliente",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "borrador_ia",
+              "displayName": "borrador_ia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_cotizacion",
+              "displayName": "total_cotizacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        768,
+        -416
+      ],
+      "id": "51faa3b1-cc5e-4734-9f48-8202661f3d7a",
+      "name": "B-Update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "7u0PMl4oyQAqiWMF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## RUTA CON DESCUENTO APLICADO",
+        "height": 240,
+        "width": 736,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -480
+      ],
+      "id": "b028a300-ba2a-4bed-9600-0ee999336c8b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "html": "<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { \n    font-family: 'Helvetica', Arial, sans-serif; \n    color: #333; \n    padding: 40px; \n    line-height: 1.6;\n  }\n  .header { \n    border-bottom: 3px solid #2c3e50; \n    margin-bottom: 20px; \n    padding-bottom: 10px;\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n  }\n  h1 { color: #2c3e50; margin: 0; font-size: 24px; }\n  .fecha { font-size: 14px; color: #7f8c8d; }\n  \n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-top: 20px; \n  }\n  th { \n    background-color: #2c3e50; \n    color: white; \n    text-align: left; \n    padding: 12px; \n  }\n  td { padding: 12px; border-bottom: 1px solid #eee; }\n  \n  /* Efecto Zebra */\n  tr:nth-child(even) { background-color: #f2f2f2; }\n  tr:nth-child(odd) { background-color: #ffffff; }\n\n  .totales-container {\n    margin-top: 30px;\n    display: flex;\n    justify-content: flex-end;\n  }\n  .totales-tabla { width: 300px; }\n  .totales-tabla td { border: none; padding: 5px 10px; }\n  \n  .descuento-texto { color: #27ae60; font-style: italic; }\n  .total-final { \n    font-weight: bold; \n    font-size: 18px; \n    color: #e67e22; \n    border-top: 2px solid #2c3e50 !important;\n  }\n</style>\n</head>\n<body>\n\n  <div class=\"header\">\n    <h1>Cotización de Servicios</h1>\n    <span class=\"fecha\">Fecha: {{ $('B-cotizacion total y borrador').item.json.fecha_generacion }}</span>\n  </div>\n\n  <p>Estimado(a) <strong>{{ $json.nombre_cliente }}</strong>,</p>\n  <p>A continuación, presentamos el detalle de los cursos solicitados:</p>\n\n  <table>\n    <thead>\n      <tr>\n        <th>Descripción del Curso</th>\n        <th style=\"text-align: right;\">Precio</th>\n      </tr>\n    </thead>\n    <tbody>\n      {{ $('B-cotizacion total y borrador').item.json.borrador_ia.split('\\n').filter(line => line.startsWith('- ')).map(curso => {\n         const parts = curso.replace('- ', '').split(': ');\n         return `<tr><td>${parts[0]}</td><td style=\"text-align: right;\">${parts[1]}</td></tr>`;\n      }).join('') }}\n    </tbody>\n  </table>\n\n  <div class=\"totales-container\">\n    <table class=\"totales-tabla\">\n      <tr>\n        <td>Subtotal Base:</td>\n        <td style=\"text-align: right;\">$ {{ $('B-cotizacion total y borrador').item.json.subtotal_base }}</td>\n      </tr>\n      <tr>\n        <td class=\"descuento-texto\">Descuento ({{ $('B-cotizacion total y borrador').item.json.porcentaje_descuento }}):</td>\n        <td style=\"text-align: right;\" class=\"descuento-texto\">-$ {{ $('B-cotizacion total y borrador').item.json.monto_descuento }}</td>\n      </tr>\n      <tr>\n        <td>Subtotal Neto:</td>\n        <td style=\"text-align: right;\">$ {{ $('B-cotizacion total y borrador').item.json.subtotal_neto }}</td>\n      </tr>\n      <tr>\n        <td>IVA (16%):</td>\n        <td style=\"text-align: right;\">$ {{ $('B-cotizacion total y borrador').item.json.iva }}</td>\n      </tr>\n      <tr class=\"total-final\">\n        <td>TOTAL:</td>\n        <td style=\"text-align: right;\">$ {{ $('B-cotizacion total y borrador').item.json.total_cotizacion }}</td>\n      </tr>\n    </table>\n  </div>\n\n</body>\n</html>"
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        -416
+      ],
+      "id": "dd0f81e9-de25-44d9-97ec-5fa4bdd757fe",
+      "name": "B-Generar la plantilla HTML de la cotizacion"
+    },
+    {
+      "parameters": {
+        "content": "## RUTA SIN DESCUENTO APLICADO",
+        "height": 240,
+        "width": 752,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -160
+      ],
+      "id": "0a823e17-8369-44b9-b54b-8d8b826a0e50",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Este código simplemente toma lo que sea que le llegue \n// (ya sea de la Ruta A o B) y lo pasa adelante.\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        -256
+      ],
+      "id": "d4a33b14-4153-49a0-a71f-f69aeb063a0c",
+      "name": "Recibe HTML de las rutas"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Generar la plantilla HTML de la cotizacion": {
+      "main": [
+        [
+          {
+            "node": "Recibe HTML de las rutas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir cotizacion en PDF en Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Bajar Cotizacion PDF para envío por correo a la empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bajar Cotizacion PDF para envío por correo a la empresa": {
+      "main": [
+        [
+          {
+            "node": "Mandar cotizacion PDF a correo de la empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mandar cotizacion PDF a correo de la empresa": {
+      "main": [
+        [
+          {
+            "node": "Bajar Cotizacion PDF para correo en borrador al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bajar Cotizacion PDF para correo en borrador al cliente": {
+      "main": [
+        [
+          {
+            "node": "Crea borrador para el cliente con la cotizacion en PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crea borrador para el cliente con la cotizacion en PDF": {
+      "main": [
+        []
+      ]
+    },
+    "Peticion a pdfshift para generar el PDF": {
+      "main": [
+        [
+          {
+            "node": "Manda el PDF ya creado de pdfshift",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manda el PDF ya creado de pdfshift": {
+      "main": [
+        [
+          {
+            "node": "Subir cotizacion en PDF en Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "inserta el cliente en la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inserta el cliente en la BD": {
+      "main": [
+        [
+          {
+            "node": "Genera una lista de los cursos con el id del cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera una lista de los cursos con el id del cliente": {
+      "main": [
+        [
+          {
+            "node": "Manda la el curso separado con el id del cliente para poder alimentar la BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manda la el curso separado con el id del cliente para poder alimentar la BD": {
+      "main": [
+        [
+          {
+            "node": "Llena la BD de relacion N:N de los cursos con el cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llena la BD de relacion N:N de los cursos con el cliente": {
+      "main": [
+        [
+          {
+            "node": "Pregunta si tiene descuento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pregunta si tiene descuento": {
+      "main": [
+        [
+          {
+            "node": "B-Query para precio de los cursos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query para precio de los cursos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query para precio de los cursos": {
+      "main": [
+        [
+          {
+            "node": "cotizacion total y borrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cotizacion total y borrador": {
+      "main": [
+        [
+          {
+            "node": "Update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Generar la plantilla HTML de la cotizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B-Query para precio de los cursos": {
+      "main": [
+        [
+          {
+            "node": "B-cotizacion total y borrador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B-cotizacion total y borrador": {
+      "main": [
+        [
+          {
+            "node": "B-Update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B-Update rows in a table": {
+      "main": [
+        [
+          {
+            "node": "B-Generar la plantilla HTML de la cotizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "B-Generar la plantilla HTML de la cotizacion": {
+      "main": [
+        [
+          {
+            "node": "Recibe HTML de las rutas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recibe HTML de las rutas": {
+      "main": [
+        [
+          {
+            "node": "Peticion a pdfshift para generar el PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b4cd11af-733c-42c7-9828-a042d2335563",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7e9924f54267a2ef5027947d1d0a073b36c02ac22ef4fdd9490629c036e3f205"
+  },
+  "id": "k2t9gU6n3nW2KwRY",
+  "tags": []
+}
